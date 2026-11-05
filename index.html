@@ -1,0 +1,293 @@
+<!doctype html>
+<!-- Declara que o documento é HTML5 -->
+<html lang="pt-BR" data-tema="dark">
+<!-- lang="pt-BR": idioma da página (ajuda leitores de tela e tradutores).
+     data-tema="dark": tema inicial; o CSS usa esse atributo para trocar as cores -->
+<head>
+<!-- Codificação de caracteres: garante que acentos e emojis apareçam certo -->
+<meta charset="utf-8">
+<!-- Deixa a página responsiva no celular. viewport-fit=cover usa a tela toda (inclusive atrás do notch) -->
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- Título que aparece na aba do navegador -->
+<title>SmartAgenda</title>
+<script>
+/* aplica o tema salvo (ou o do sistema) antes da página aparecer, sem piscar */
+/* Este script roda no <head>, antes do corpo ser desenhado, para evitar
+   aquele "flash" de tema errado quando a página carrega */
+try{
+  // Lê os dados salvos no navegador (localStorage) na chave 'smartagenda:v1'
+  var s = JSON.parse(localStorage.getItem('smartagenda:v1'));
+  // Se há tema salvo, usa ele; senão, segue a preferência do sistema (claro ou escuro)
+  document.documentElement.dataset.tema = (s && s.tema) || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+}catch(e){}
+// O try/catch ignora erros (ex.: localStorage bloqueado ou JSON inválido) e mantém o tema padrão
+</script>
+<!-- Importa o arquivo de estilos (cores, layout, animações) -->
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- ============ TELA DE ACESSO ============ -->
+<!-- Primeira tela: aparece para quem ainda não fez login. Tem login e cadastro -->
+<div id="acesso">
+  <!-- Barra superior da tela de acesso -->
+  <header class="top">
+    <!-- Logo: ícone de relógio em SVG (círculo + ponteiros) + nome do app.
+         As classes mh/hh (ponteiro dos minutos/horas) servem para animar os ponteiros no CSS.
+         aria-hidden="true" esconde o desenho de leitores de tela -->
+    <a class="logo" href="#"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path class="mh" d="M12 12V7"/><path class="hh" d="M12 12l3 2"/></svg>SmartAgenda</a>
+    <!-- Botão de alternar tema claro/escuro (o texto é preenchido pelo script.js) -->
+    <div class="acoes"><button id="tema2" class="gh" type="button"></button></div>
+  </header>
+
+  <!-- Conteúdo principal da tela de acesso: texto de apresentação à esquerda, formulário à direita -->
+  <main class="lg">
+    <!-- Bloco de apresentação (hero) -->
+    <section class="lg-hero">
+      <h1>Seu tempo livre, bem usado.</h1>
+      <p>Entre para ver as brechas livres do seu dia, ou crie sua conta em menos de um minuto.</p>
+
+      <!-- Miniatura decorativa que mostra como a agenda fica (só visual, não funciona de verdade) -->
+      <div class="mini" aria-hidden="true">
+        <!-- Cabeçalho da miniatura: resumo do dia -->
+        <div class="mtopo"><b>Hoje</b><span>3 compromissos, 2 brechas</span></div>
+        <!-- mev = compromisso de exemplo -->
+        <div class="mev"><span>Aula online</span><small>09:00 às 11:00</small></div>
+        <!-- mlv = brecha livre de exemplo -->
+        <div class="mlv"><b>Livre</b> 11:00 às 12:00, 1h</div>
+        <div class="mev"><span>Almoço</span><small>12:00 às 13:00</small></div>
+        <!-- "grande" destaca a brecha maior -->
+        <div class="mlv grande"><b>Livre</b> 13:00 às 15:30, 2h30</div>
+        <div class="mev"><span>Reunião do grupo</span><small>15:30 às 16:30</small></div>
+      </div>
+    </section>
+
+    <!-- Cartão com as abas Entrar / Criar conta. aria-label descreve a área para leitores de tela -->
+    <section class="pn lg-card" aria-label="Acesso à plataforma">
+      <!-- Abas. role="tab" e aria-selected informam qual está ativa (acessibilidade).
+           onclick="aba('...')" chama a função do script.js que troca de painel -->
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="abaLogin" aria-selected="true" aria-controls="painelLogin" onclick="aba('login')">Entrar</button>
+        <!-- tabindex="-1": fora da ordem do Tab enquanto não está ativa -->
+        <button type="button" role="tab" id="abaCad" aria-selected="false" aria-controls="painelCad" tabindex="-1" onclick="aba('cadastro')">Criar conta</button>
+      </div>
+
+      <!-- ===== LOGIN ===== -->
+      <!-- onsubmit: impede o envio padrão do formulário (que recarregaria a página) e chama entrar().
+           novalidate: desliga a validação automática do navegador, pois o script valida sozinho -->
+      <form id="painelLogin" role="tabpanel" aria-labelledby="abaLogin" onsubmit="event.preventDefault(); entrar()" novalidate>
+        <h2>Bem-vindo de volta</h2>
+        <!-- fd = campo (rótulo + input) -->
+        <div class="fd">
+          <label for="loginUsuario">Usuário</label>
+          <!-- autocomplete="username": deixa o navegador/gerenciador de senhas preencher -->
+          <input id="loginUsuario" type="text" autocomplete="username" placeholder="seu usuário">
+        </div>
+        <div class="fd">
+          <label for="loginSenha">Senha</label>
+          <!-- pw = caixa que une o campo de senha e o botão de mostrar/ocultar -->
+          <div class="pw">
+            <input id="loginSenha" type="password" autocomplete="current-password" placeholder="sua senha">
+            <!-- Alterna entre senha escondida e visível (função togglePw no script.js) -->
+            <button type="button" class="olho" onclick="togglePw('loginSenha', this)" aria-label="Mostrar ou ocultar a senha">Mostrar</button>
+          </div>
+          <!-- Aviso que o script exibe quando o Caps Lock está ligado (começa escondido) -->
+          <p id="caps" class="aviso" hidden>⚠ Caps Lock está ligado</p>
+        </div>
+        <!-- Se marcado, a sessão fica salva e o usuário não precisa logar de novo -->
+        <label class="ck"><input id="manter" type="checkbox"> Manter conectado neste navegador</label>
+        <!-- Área das mensagens de erro do login (role="alert" faz o leitor de tela avisar na hora) -->
+        <p id="mensagem" class="msg" role="alert"></p>
+        <button class="bt full" type="submit">Entrar</button>
+        <!-- Atalho para ir à aba de cadastro; "lnk" faz o botão parecer um link -->
+        <p class="troca">Ainda não tem conta? <button type="button" class="lnk" onclick="aba('cadastro')">Criar conta</button></p>
+      </form>
+
+      <!-- ===== CADASTRO ===== -->
+      <!-- Começa escondido (hidden); a função aba() mostra quando a pessoa clica em "Criar conta" -->
+      <form id="painelCad" role="tabpanel" aria-labelledby="abaCad" onsubmit="event.preventDefault(); cadastrar()" novalidate hidden>
+        <h2>Crie sua conta</h2>
+        <div class="fd">
+          <label for="cadNome">Nome</label>
+          <input id="cadNome" type="text" autocomplete="name" placeholder="seu nome">
+        </div>
+        <div class="fd">
+          <label for="cadEmail">E-mail</label>
+          <!-- type="email": teclado de e-mail no celular -->
+          <input id="cadEmail" type="email" autocomplete="email" placeholder="voce@exemplo.com">
+        </div>
+        <div class="fd">
+          <label for="cadUsuario">Usuário</label>
+          <input id="cadUsuario" type="text" autocomplete="username" placeholder="escolha um usuário">
+        </div>
+        <div class="fd">
+          <label for="cadSenha">Senha</label>
+          <div class="pw">
+            <!-- oninput="forca()": a cada tecla digitada, recalcula a força da senha -->
+            <input id="cadSenha" type="password" autocomplete="new-password" placeholder="crie uma senha" oninput="forca()">
+            <button type="button" class="olho" onclick="togglePw('cadSenha', this)" aria-label="Mostrar ou ocultar a senha">Mostrar</button>
+          </div>
+          <!-- Medidor de força: 4 barrinhas (<i>) que o CSS pinta conforme data-n (0 a 4) -->
+          <div class="forca" id="forca" data-n="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <!-- Texto da força (ex.: "fraca", "forte") escrito pelo script -->
+          <small id="forcaTxt" class="ftxt"></small>
+        </div>
+        <!-- Mensagens de erro do cadastro -->
+        <p id="mensagemCad" class="msg" role="alert"></p>
+        <button class="bt full" type="submit">Cadastrar</button>
+        <p class="troca">Já tem conta? <button type="button" class="lnk" onclick="aba('login')">Entrar</button></p>
+      </form>
+    </section>
+  </main>
+</div>
+
+<!-- ============ BOAS-VINDAS (transição depois do login) ============ -->
+<!-- Tela rápida de animação que aparece logo após entrar, antes da agenda. Começa escondida.
+     role="status" avisa leitores de tela que algo está acontecendo -->
+<div id="boasvindas" role="status" hidden>
+  <div>
+    <!-- Relógio grande animado -->
+    <div class="rel"><svg viewBox="0 0 24 24" width="96" height="96" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path class="mh" d="M12 12V7"/><path class="hh" d="M12 12l3 2"/></svg></div>
+    <!-- O script troca "Olá!" pelo nome da pessoa -->
+    <h1 id="bvNome">Olá!</h1>
+    <p>Preparando a sua agenda…</p>
+    <!-- Barra de carregamento (a animação é feita no CSS) -->
+    <div class="bar"><i></i></div>
+  </div>
+</div>
+
+<!-- ============ PLATAFORMA (só aparece após o login) ============ -->
+<!-- Aplicativo principal: o script mostra esta área só quando há usuário logado -->
+<div id="plataforma">
+<!-- Barra superior da plataforma -->
+<header class="top">
+  <a class="logo" href="#"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path class="mh" d="M12 12V7"/><path class="hh" d="M12 12l3 2"/></svg>SmartAgenda</a>
+  <div class="acoes">
+    <!-- Saudação com o nome do usuário (preenchida pelo script) -->
+    <span id="ola"></span>
+    <!-- Botão de tema claro/escuro -->
+    <button id="tema" class="gh" type="button"></button>
+    <!-- Encerra a sessão chamando logout() -->
+    <button id="logout" class="gh" type="button" onclick="logout()">Sair</button>
+  </div>
+</header>
+
+<!-- Faixa de destaque: texto de apresentação + progresso do dia -->
+<section class="hero">
+  <div>
+    <h1>Seu tempo livre, bem usado.</h1>
+    <p>Cadastre seus compromissos. Veja as brechas livres do dia e use cada uma do jeito que quiser.</p>
+    <!-- Frase motivacional; ao clicar, o script sorteia outra -->
+    <button id="frase" class="frase" type="button" title="Clique para outra frase"></button>
+  </div>
+  <!-- Barra de progresso do dia. role="progressbar" + aria-value* informam o andamento (0 a 100) a leitores de tela -->
+  <div class="prog" role="progressbar" id="pg" aria-label="Progresso de hoje" aria-valuemin="0" aria-valuemax="100">
+    <div class="pl"><span>Progresso de hoje</span><b id="pv">0%</b></div>
+    <!-- A largura do <i> (id="pb") cresce conforme o progresso -->
+    <div class="bar"><i id="pb" style="width:0"></i></div>
+    <!-- Texto de apoio (ex.: quantas tarefas/metas já foram feitas) -->
+    <small id="pt"></small>
+  </div>
+</section>
+
+<!-- Grade com os painéis (cards) da plataforma -->
+<main class="g">
+  <!-- ===== AGENDA DO DIA ===== -->
+  <section class="pn w" aria-labelledby="ha">
+    <h2 id="ha">Agenda do dia</h2>
+    <!-- Seletor de semana: ‹ volta 7 dias, › avança 7 dias (data-w guarda quantos dias andar) -->
+    <div class="wk"><button data-w="-7" aria-label="Semana anterior" type="button">‹</button><div id="semana"></div><button data-w="7" aria-label="Próxima semana" type="button">›</button></div>
+    <!-- Título com a data do dia selecionado -->
+    <div id="dtitulo"></div>
+    <!-- Linha do tempo do dia: mostra compromissos e as brechas livres entre eles -->
+    <div id="tlw"><div id="tl"></div></div>
+    <!-- Formulário para cadastrar um compromisso: nome, hora de início e de fim.
+         min/max limitam os horários entre 07:00 e 22:00 -->
+    <form id="fev" class="r">
+      <input id="et" type="text" placeholder="Novo compromisso" aria-label="Nome do compromisso" required>
+      <input id="ei" type="time" value="09:00" min="07:00" max="22:00" aria-label="Início" required>
+      <input id="ef" type="time" value="10:00" min="07:00" max="22:00" aria-label="Fim" required>
+      <button class="bt" type="submit">Adicionar</button>
+    </form>
+    <!-- Mensagem de erro da agenda (ex.: horário de fim antes do início ou conflito) -->
+    <p id="erro" role="alert"></p>
+  </section>
+
+  <!-- ===== METAS DIÁRIAS ===== -->
+  <section class="pn" aria-labelledby="hm">
+    <h2 id="hm">Metas diárias</h2>
+    <!-- Lista de metas (gerada pelo script) -->
+    <div id="metas"></div>
+    <!-- Desmarca todas as metas para começar de novo -->
+    <button id="resetMetas" class="bt sec" type="button">Zerar metas</button>
+  </section>
+
+  <!-- ===== TAREFAS ===== -->
+  <section class="pn" aria-labelledby="ht">
+    <h2 id="ht">Tarefas</h2>
+    <!-- Lista de tarefas (os <li> são criados pelo script) -->
+    <ul class="l" id="tarefas"></ul>
+    <!-- Formulário de nova tarefa -->
+    <form id="ftar" class="r"><input id="tt" type="text" placeholder="Nova tarefa" aria-label="Nova tarefa" required><button class="bt" type="submit">Adicionar</button></form>
+    <!-- Escolhe uma tarefa aleatória para você fazer (bom para quando falta decisão) -->
+    <button id="sorteio" class="bt sec" type="button">🎲 Sortear tarefa</button>
+  </section>
+
+  <!-- ===== LEMBRETES ===== -->
+  <section class="pn" aria-labelledby="hl">
+    <h2 id="hl">Lembretes</h2>
+    <!-- Lista de lembretes (gerada pelo script) -->
+    <ul class="l" id="lemb"></ul>
+    <!-- Formulário: texto do lembrete + horário em que deve avisar -->
+    <form id="flem" class="r"><input id="lt" type="text" placeholder="Lembrar de…" aria-label="Texto do lembrete" required><input id="lh" type="time" aria-label="Horário" required><button class="bt" type="submit">Criar</button></form>
+  </section>
+
+  <!-- ===== FOCO (temporizador estilo Pomodoro) ===== -->
+  <section class="pn foco" aria-labelledby="hf">
+    <h2 id="hf">Foco</h2>
+    <!-- Mostrador do tempo restante (começa em 25:00) -->
+    <div class="tm" id="ftm" role="timer">25:00</div>
+    <div class="ctl">
+      <!-- Inicia / pausa a contagem -->
+      <button id="fgo" class="bt" type="button">Iniciar</button>
+      <!-- Volta o relógio ao tempo inicial do modo escolhido -->
+      <button id="frs" class="bt sec" type="button">Zerar</button>
+    </div>
+    <!-- Escolha do tipo de contagem: data-modo diz qual é; aria-pressed marca o ativo -->
+    <div class="ctl modos" role="group" aria-label="Tipo de contagem">
+      <button class="bt sec" type="button" data-modo="foco" aria-pressed="true">Foco 25</button>
+      <button class="bt sec" type="button" data-modo="pausa" aria-pressed="false">Pausa 5</button>
+      <button class="bt sec" type="button" data-modo="longa" aria-pressed="false">Longa 15</button>
+    </div>
+    <!-- Mensagem exibida quando a contagem termina -->
+    <small id="fin"></small>
+  </section>
+
+  <!-- ===== SUA SEMANA (estatísticas e backup) ===== -->
+  <section class="pn f dados" aria-labelledby="hd">
+    <h2 id="hd">Sua semana</h2>
+    <!-- Gráfico de barras com os minutos de foco dos últimos 7 dias (desenhado pelo script) -->
+    <div class="hb" id="hb" role="img" aria-label="Minutos de foco nos últimos 7 dias"></div>
+    <!-- Sequência de dias seguidos usando o foco -->
+    <div class="seq" id="seq"></div>
+    <!-- Total de foco no período -->
+    <small id="dtot"></small>
+    <div class="ctl">
+      <!-- Baixa um arquivo .json com todos os seus dados -->
+      <button id="expo" class="bt sec" type="button">Baixar backup</button>
+      <!-- Abre o seletor de arquivo para restaurar um backup -->
+      <button id="impb" class="bt sec" type="button">Restaurar backup</button>
+      <!-- Input de arquivo escondido: o botão acima o aciona por trás dos panos -->
+      <input id="imp" type="file" accept="application/json,.json" hidden aria-label="Arquivo de backup">
+    </div>
+  </section>
+</main>
+<!-- Aviso rápido (toast) que aparece no canto para confirmar ações, ex.: "Compromisso adicionado" -->
+<div id="toast" role="status"></div>
+
+</div>
+
+<!-- Carrega a lógica do app (login, agenda, tarefas, timer, backup etc.).
+     Fica no fim do body para o HTML já existir quando o script rodar -->
+<script src="script.js"></script>
+</body>
+</html>
